@@ -109,6 +109,12 @@ table.pvtTable tbody tr td {
     border-bottom: 1px solid lightgrey;
 }
 
+/* Makes each checkbox and its label appear on a new line */
+.pvtCheckContainer label {
+    display: block; 
+    margin: 5px 0;
+}
+
 .pvtCheckContainer p{ margin: 5px; }
 
 .pvtRendererArea { padding: 5px;}
