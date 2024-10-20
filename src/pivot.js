@@ -141,8 +141,13 @@ function pivotTableRenderer(pivotData, opts) {
 
 	const colAttrs = pivotData.cols;
 	const rowAttrs = pivotData.rows;
-	const rowKeys = pivotData.getRowKeys().map(key => key.split(String.fromCharCode(0)));
-	const colKeys = pivotData.getColKeys().map(key => key.split(String.fromCharCode(0)));
+	
+	const rowKeys = pivotData.getRowKeys()
+    .map(key => key.split(String.fromCharCode(0)))
+    .filter(row => row.some(v => v !== 'null' && v.trim() !== ''));
+  const colKeys = pivotData.getColKeys()
+    .map(key => key.split(String.fromCharCode(0)))
+    .filter(col => col.some(v => v !== 'null' && v.trim() !== ''));
 
 	let getClickHandler = null;
 	if (opts.table.clickCallback) {
