@@ -141,13 +141,13 @@ function pivotTableRenderer(pivotData, opts) {
 
 	const colAttrs = pivotData.cols;
 	const rowAttrs = pivotData.rows;
-	
+
 	const rowKeys = pivotData.getRowKeys()
-    .map(key => key.split(String.fromCharCode(0)))
-    .filter(row => row.some(v => v !== 'null' && v.trim() !== ''));
-  const colKeys = pivotData.getColKeys()
-    .map(key => key.split(String.fromCharCode(0)))
-    .filter(col => col.some(v => v !== 'null' && v.trim() !== ''));
+		.map(key => key.split(String.fromCharCode(0)))
+		.filter(row => row.some(v => v !== 'null' && v.trim() !== ''));
+	const colKeys = pivotData.getColKeys()
+		.map(key => key.split(String.fromCharCode(0)))
+		.filter(col => col.some(v => v !== 'null' && v.trim() !== ''));
 
 	let getClickHandler = null;
 	if (opts.table.clickCallback) {
@@ -370,203 +370,263 @@ function pivotTableRenderer(pivotData, opts) {
 
 // The main function to initialise the pivot UI for drag-and-drop and table rendering
 function pivotUI(element, input, inputOpts = {}) {
-	const opts = {
-		cols: inputOpts.cols || [],
-		rows: inputOpts.rows || [],
-		aggregator: inputOpts.aggregator || countAggregator,
-		renderer: inputOpts.renderer || pivotTableRenderer,
-		table: {
-			clickCallback: inputOpts.clickCallback || null,
-			rowTotals: inputOpts.rowTotals !== undefined ? inputOpts.rowTotals : true,
-			colTotals: inputOpts.colTotals !== undefined ? inputOpts.colTotals : true,
-		},
-		totals: inputOpts.totals || "Totals",
-		...inputOpts
-	};
+  const opts = {
+    cols: inputOpts.cols || [],
+    rows: inputOpts.rows || [],
+    aggregator: inputOpts.aggregator || countAggregator,
+    renderer: inputOpts.renderer || pivotTableRenderer,
+    table: {
+      clickCallback: inputOpts.clickCallback || null,
+      rowTotals: inputOpts.rowTotals !== undefined ? inputOpts.rowTotals : true,
+      colTotals: inputOpts.colTotals !== undefined ? inputOpts.colTotals : true,
+    },
+    totals: inputOpts.totals || "Totals",
+    filters: inputOpts.filters || {}, // Track filters for attributes
+    ...inputOpts
+  };
 
-	const pivotData = new PivotData(input, opts);
-	const renderer = opts.renderer;
+  const pivotData = new PivotData(input, opts);
+  const renderer = opts.renderer;
 
-	// UI table structure for drag-and-drop
-	const uiTable = document.createElement('table');
-	uiTable.classList.add('pvtUi');
+  // Create a UI table structure for drag-and-drop
+  const uiTable = document.createElement('table');
+  uiTable.classList.add('pvtUi');
 
-	const tr1 = document.createElement('tr');
-	const tr2 = document.createElement('tr');
+  const tr1 = document.createElement('tr');
+  const tr2 = document.createElement('tr');
 
-	// Renderer control
-	const rendererControl = document.createElement('td');
-	rendererControl.classList.add('pvtUiCell');
+  // Renderer control
+  const rendererControl = document.createElement('td');
+  rendererControl.classList.add('pvtUiCell');
 
-	// Setting Table as a renderer option
-	const rendererSelect = document.createElement('select');
-	rendererSelect.classList.add('pvtRenderer');
+  const rendererSelect = document.createElement('select');
+  rendererSelect.classList.add('pvtRenderer');
 	const option = document.createElement('option');
 	option.value = 'Table';
 	option.textContent = 'Table';
 	option.selected = true;
 	rendererSelect.appendChild(option);
-	rendererControl.appendChild(rendererSelect);
+  rendererControl.appendChild(rendererSelect);
 
-	// Add renderers to the renderer dropdown
-	for (const rendererName in renderer) {
-		const option = document.createElement('option');
-		option.value = rendererName;
-		option.textContent = rendererName;
-		rendererSelect.appendChild(option);
-	}
+  // Add renderers to the renderer dropdown
+  for (const rendererName in renderer) {
+    const option = document.createElement('option');
+    option.value = rendererName;
+    option.textContent = rendererName;
+    rendererSelect.appendChild(option);
+  }
 
-	// Unused attributes container
-	const unusedAttrs = document.createElement('td');
-	unusedAttrs.classList.add('pvtAxisContainer', 'pvtUnused', 'pvtUiCell');
-	unusedAttrs.style.minHeight = '50px';
+  // Unused attributes container
+  const unusedAttrs = document.createElement('td');
+  unusedAttrs.classList.add('pvtAxisContainer', 'pvtUnused', 'pvtUiCell');
+  unusedAttrs.style.minHeight = '50px';
 
-	const unusedTitle = document.createElement('div');
-	unusedTitle.textContent = 'Unused Attributes';
-	unusedAttrs.appendChild(unusedTitle);
+  const unusedTitle = document.createElement('div');
+  unusedTitle.textContent = 'Unused Attributes';
+  unusedAttrs.appendChild(unusedTitle);
 
-	const unusedList = document.createElement('ul');
-	unusedAttrs.appendChild(unusedList);
+  const unusedList = document.createElement('ul');
+  unusedAttrs.appendChild(unusedList);
 
-	// Drag-and-drop for unused attributes
-	function makeDraggable(attr, target) {
-		const li = document.createElement('li');
-		li.textContent = attr;
-		li.draggable = true;
-		li.classList.add('pvtAttr');
+  // Drag-and-drop for unused attributes
+  function makeDraggable(attr, target) {
+    const li = document.createElement('li');
+    li.classList.add('pvtAttr');
 
-		// Set drag data
-		li.addEventListener('dragstart', (e) => {
-			e.dataTransfer.setData('text/plain', attr);
-		});
-		target.appendChild(li);
-	}
+    const attrLabel = document.createElement('span');
+    attrLabel.classList.add('pvtAttr');
+    attrLabel.textContent = attr;
 
-	const attributes = Object.keys(input[0]);
-	attributes.forEach(attr => {
-		if (!opts.cols.includes(attr) && !opts.rows.includes(attr)) {
-			makeDraggable(attr, unusedList);
-		}
-	});
+    const triangle = document.createElement('span');
+    triangle.classList.add('pvtTriangle');
+    triangle.innerHTML = "&#x25BE;"; // Triangle symbol
 
-	// Axis containers for rows and columns
-	const rowContainer = document.createElement('td');
-	rowContainer.classList.add('pvtAxisContainer', 'pvtRows', 'pvtUiCell');
-	const rowTitle = document.createElement('div');
-	rowTitle.textContent = 'Rows';
-	rowContainer.appendChild(rowTitle);
+    li.appendChild(attrLabel);
+    li.appendChild(triangle);
 
-	const rowList = document.createElement('ul');
-	rowContainer.appendChild(rowList);
+    // Handle the filter box display
+    triangle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showFilterBox(attr, triangle);
+    });
 
-	opts.rows.forEach(row => makeDraggable(row, rowList));
+    // Set drag data
+    li.draggable = true;
+    li.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', attr);
+    });
 
-	const colContainer = document.createElement('td');
-	colContainer.classList.add('pvtAxisContainer', 'pvtCols', 'pvtUiCell');
-	const colTitle = document.createElement('div');
-	colTitle.textContent = 'Columns';
-	colContainer.appendChild(colTitle);
+    target.appendChild(li);
+  }
 
-	const colList = document.createElement('ul');
-	colContainer.appendChild(colList);
+  const attributes = Object.keys(input[0]);
+  attributes.forEach(attr => {
+    if (!opts.cols.includes(attr) && !opts.rows.includes(attr)) {
+      makeDraggable(attr, unusedList);
+    }
+  });
 
-	opts.cols.forEach(col => makeDraggable(col, colList));
+  // Axis containers for rows and columns
+  const rowContainer = document.createElement('td');
+  rowContainer.classList.add('pvtAxisContainer', 'pvtRows', 'pvtUiCell');
+  const rowTitle = document.createElement('div');
+  rowTitle.textContent = 'Rows';
+  rowContainer.appendChild(rowTitle);
 
-	// Enable drop zones for rows, columns, and unused attributes
-	function enableDropZone(container, axis) {
-		container.addEventListener('dragover', (e) => {
-			e.preventDefault();
-		});
+  const rowList = document.createElement('ul');
+  rowContainer.appendChild(rowList);
 
-		container.addEventListener('drop', (e) => {
-			e.preventDefault();
-			const droppedAttr = e.dataTransfer.getData('text/plain');
+  opts.rows.forEach(row => makeDraggable(row, rowList));
 
-			console.log("Dropped Attribute: ", droppedAttr);
+  const colContainer = document.createElement('td');
+  colContainer.classList.add('pvtAxisContainer', 'pvtCols', 'pvtUiCell', 'pvtHorizList'); 
+  const colTitle = document.createElement('div');
+  colTitle.textContent = 'Columns';
+  colContainer.appendChild(colTitle);
 
-			// Move the attribute to the corresponding area and remove from the previous list
+  const colList = document.createElement('ul');
+  colList.classList.add('pvtHorizList');
+  colContainer.appendChild(colList);
+
+  opts.cols.forEach(col => makeDraggable(col, colList));
+
+  // Enable drop zones for rows, columns, and unused attributes
+  function enableDropZone(container, axis) {
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+    });
+
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const droppedAttr = e.dataTransfer.getData('text/plain');
+
+      // Move the attribute to the corresponding area and remove from the previous list
 			if (axis === 'rows' && !opts.rows.includes(droppedAttr)) {
-				opts.rows.push(droppedAttr);
-				removeAttributeFromLists(droppedAttr);
-				makeDraggable(droppedAttr, rowList);
-			} else if (axis === 'cols' && !opts.cols.includes(droppedAttr)) {
-				opts.cols.push(droppedAttr);
-				removeAttributeFromLists(droppedAttr);
-				makeDraggable(droppedAttr, colList);
-			} else if (axis === 'unused') {
-				opts.rows = opts.rows.filter(r => r !== droppedAttr);
-				opts.cols = opts.cols.filter(c => c !== droppedAttr);
-				removeAttributeFromLists(droppedAttr);
-				makeDraggable(droppedAttr, unusedList);
-			}
+        opts.rows.push(droppedAttr);
+        removeAttributeFromLists(droppedAttr);
+        makeDraggable(droppedAttr, rowList);
+      } else if (axis === 'cols' && !opts.cols.includes(droppedAttr)) {
+        opts.cols.push(droppedAttr);
+        removeAttributeFromLists(droppedAttr);
+        makeDraggable(droppedAttr, colList);
+      } else if (axis === 'unused') {
+        opts.rows = opts.rows.filter(r => r !== droppedAttr);
+        opts.cols = opts.cols.filter(c => c !== droppedAttr);
+        removeAttributeFromLists(droppedAttr);
+        makeDraggable(droppedAttr, unusedList);
+      }
 
-			console.log("Updated Rows: ", opts.rows);
-			console.log("Updated Cols: ", opts.cols);
-			refresh();
-		});
-	}
+      refresh();
+    });
+  }
 
-	function removeAttributeFromLists(attr) {
-		[rowList, colList, unusedList].forEach(list => {
-			Array.from(list.children).forEach(child => {
-				if (child.textContent === attr) {
-					child.remove();
-				}
-			});
-		});
-	}
+  function removeAttributeFromLists(attr) {
+    [rowList, colList, unusedList].forEach(list => {
+      Array.from(list.children).forEach(child => {
+        if (child.querySelector('.pvtAttr').textContent === attr) {
+          child.remove();
+        }
+      });
+    });
+  }
 
-	enableDropZone(rowContainer, 'rows');
-	enableDropZone(colContainer, 'cols');
-	enableDropZone(unusedAttrs, 'unused');
+  enableDropZone(rowContainer, 'rows');
+  enableDropZone(colContainer, 'cols');
+  enableDropZone(unusedAttrs, 'unused');
 
-	tr1.appendChild(rendererControl);
-	tr1.appendChild(colContainer);
-	tr1.appendChild(unusedAttrs);
-	tr2.appendChild(rowContainer);
+  tr1.appendChild(rendererControl);
+  tr1.appendChild(colContainer);
+  tr1.appendChild(unusedAttrs);
+  tr2.appendChild(rowContainer);
 
-	// Append the pivot table itself to the UI
-	const tableContainer = document.createElement('td');
-	tableContainer.classList.add('pvtRendererArea');
+  // Append the pivot table itself to the UI
+  const tableContainer = document.createElement('td');
+  tableContainer.classList.add('pvtRendererArea');
 
-	// Generate the initial table
-	const table = renderer(pivotData, opts);
-	tableContainer.appendChild(table);
-	tr2.appendChild(tableContainer);
+  // Generate the initial table
+  const table = renderer(pivotData, opts);
+  tableContainer.appendChild(table);
+  tr2.appendChild(tableContainer);
 
-	uiTable.appendChild(tr1);
-	uiTable.appendChild(tr2);
+  uiTable.appendChild(tr1);
+  uiTable.appendChild(tr2);
 
-	// Clear previous UI and append the new one
-	while (element.firstChild) {
-		element.removeChild(element.firstChild);
-	}
-	element.appendChild(uiTable);
+  // Clear previous UI and append the new one
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+  element.appendChild(uiTable);
 
-	// Function to refresh the pivot table on drag-and-drop
-	function refresh() {
-		const updatedOpts = {
-			...opts,
-			cols: Array.from(colList.children).map(li => li.textContent.trim()),
-			rows: Array.from(rowList.children).map(li => li.textContent.trim())
-		};
+  // Function to show the filter box for a specific attribute
+  function showFilterBox(attr, triangle) {
+    const uniqueValues = [...new Set(input.map(record => record[attr]))];
 
-		// Ensure there are no empty rows or columns in the table
-		updatedOpts.rows = updatedOpts.rows.filter(row => row !== '');
-		updatedOpts.cols = updatedOpts.cols.filter(col => col !== '');
+    // Calculate position of the filter box relative to the triangle
+    const triangleRect = triangle.getBoundingClientRect();
+    const filterBox = document.createElement('div');
+    filterBox.classList.add('pvtFilterBox');
+    filterBox.style.top = `${triangleRect.bottom + window.scrollY}px`;
+    filterBox.style.left = `${triangleRect.left + window.scrollX}px`;
 
-		console.log("Refreshing with Rows: ", updatedOpts.rows);
-		console.log("Refreshing with Cols: ", updatedOpts.cols);
+    filterBox.innerHTML = `
+      <h4>Filter ${attr}</h4>
+      <div class="pvtCheckContainer">
+        ${uniqueValues.map(val => `
+          <label>
+            <input type="checkbox" value="${val}" checked>
+            ${val}
+          </label>
+        `).join('')}
+      </div>
+      <button class="pvtApplyFilter">Apply Filter</button>
+      <button class="pvtCloseFilter">Close</button>
+    `;
 
-		const newPivotData = new PivotData(input, updatedOpts);
-		const newTable = renderer(newPivotData, updatedOpts);
+    document.body.appendChild(filterBox);
 
-		// Clears the old table
-		while (tableContainer.firstChild) {
-			tableContainer.removeChild(tableContainer.firstChild);
-		}
+    // Apply filter on click
+    filterBox.querySelector('.pvtApplyFilter').addEventListener('click', () => {
+      const checkedValues = Array.from(filterBox.querySelectorAll('input[type=checkbox]:checked')).map(checkbox => checkbox.value);
 
-		// Append the refreshed table
-		tableContainer.appendChild(newTable);
-	}
+      opts.filters[attr] = checkedValues;
+
+      document.body.removeChild(filterBox);
+      refresh();
+    });
+
+    // Close filter box on button click
+    filterBox.querySelector('.pvtCloseFilter').addEventListener('click', () => {
+      document.body.removeChild(filterBox);
+    });
+  }
+
+  // Function to refresh the pivot table on drag-and-drop or filter application
+  function refresh() {
+    const updatedOpts = {
+      ...opts,
+      cols: Array.from(colList.children).map(li => li.querySelector('.pvtAttr').textContent.trim()),
+      rows: Array.from(rowList.children).map(li => li.querySelector('.pvtAttr').textContent.trim()),
+      filters: opts.filters
+    };
+
+    updatedOpts.rows = updatedOpts.rows.filter(row => row !== '');
+    updatedOpts.cols = updatedOpts.cols.filter(col => col !== '');
+
+    // Filter the input based on filters applied
+    const filteredInput = input.filter(record => {
+      return Object.keys(updatedOpts.filters).every(attr => {
+        const filterValues = updatedOpts.filters[attr];
+        return filterValues.includes(record[attr]);
+      });
+    });
+
+    const newPivotData = new PivotData(filteredInput, updatedOpts);
+    const newTable = renderer(newPivotData, updatedOpts);
+
+    while (tableContainer.firstChild) {
+      tableContainer.removeChild(tableContainer.firstChild);
+    }
+
+    tableContainer.appendChild(newTable);
+  }
 }
