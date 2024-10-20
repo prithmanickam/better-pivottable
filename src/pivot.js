@@ -492,20 +492,46 @@ function pivotUI(element, input, inputOpts = {}) {
 
 	// Enable drop zones for rows, columns, and unused attributes
 	function enableDropZone(container, axis) {
+		let placeholder = null;
+
 		container.addEventListener('dragover', (e) => {
-			e.preventDefault();
+			e.preventDefault(); 
+
+			// Creates a placeholder if it doesn't already exists
+			if (!placeholder) {
+				placeholder = document.createElement('li');
+				placeholder.className = 'pvtPlaceholder';
+				container.appendChild(placeholder); 
+			}
+		});
+
+		container.addEventListener('dragleave', () => {
+			// Remove the placeholder when dragging leaves the zone
+			if (placeholder && container.contains(placeholder)) {
+				container.removeChild(placeholder);
+				placeholder = null;
+			}
 		});
 
 		container.addEventListener('drop', (e) => {
 			e.preventDefault();
+
+			// remove placeholder once the drop occurs
+			if (placeholder && container.contains(placeholder)) {
+				container.removeChild(placeholder);
+				placeholder = null;
+			}
+
 			const droppedAttr = e.dataTransfer.getData('text/plain');
 
 			// Move the attribute to the corresponding area and remove from the previous list
 			if (axis === 'rows' && !opts.rows.includes(droppedAttr)) {
+				opts.cols = opts.cols.filter(col => col !== droppedAttr); 
 				opts.rows.push(droppedAttr);
 				removeAttributeFromLists(droppedAttr);
 				makeDraggable(droppedAttr, rowList);
 			} else if (axis === 'cols' && !opts.cols.includes(droppedAttr)) {
+				opts.rows = opts.rows.filter(row => row !== droppedAttr);
 				opts.cols.push(droppedAttr);
 				removeAttributeFromLists(droppedAttr);
 				makeDraggable(droppedAttr, colList);
@@ -520,6 +546,7 @@ function pivotUI(element, input, inputOpts = {}) {
 		});
 	}
 
+	// Helper function to remove the attribute from any of the lists
 	function removeAttributeFromLists(attr) {
 		[rowList, colList, unusedList].forEach(list => {
 			Array.from(list.children).forEach(child => {
