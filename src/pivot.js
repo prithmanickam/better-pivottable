@@ -172,35 +172,6 @@ function pivotTableRenderer(pivotData, opts) {
 	const table = document.createElement('table');
 	table.className = 'pvtTable';
 
-	// Helper function for cell spanning
-	function spanSize(arr, i, j) {
-		if (i !== 0) {
-			let noDraw = true;
-			for (let x = 0; x <= j; x++) {
-				if (arr[i - 1][x] !== arr[i][x]) {
-					noDraw = false;
-					break;
-				}
-			}
-			if (noDraw) {
-				return -1;
-			}
-		}
-		let len = 1;
-		while (i + len < arr.length) {
-			let stop = false;
-			for (let x = 0; x <= j; x++) {
-				if (arr[i][x] !== arr[i + len][x]) {
-					stop = true;
-					break;
-				}
-			}
-			if (stop) break;
-			len++;
-		}
-		return len;
-	}
-
 	// Build the table header
 	const thead = document.createElement('thead');
 	for (let j = 0; j < colAttrs.length; j++) {
@@ -432,33 +403,33 @@ function pivotUI(element, input, inputOpts = {}) {
 	function makeDraggable(attr, target) {
 		const li = document.createElement('li');
 		li.classList.add('pvtAttr');
-
+		li.id = `attr-${attr}`; // id to track the element
+	
 		const attrLabel = document.createElement('span');
-		attrLabel.classList.add('pvtAttr');
 		attrLabel.textContent = attr;
-
+	
 		const triangle = document.createElement('span');
 		triangle.classList.add('pvtTriangle');
 		triangle.innerHTML = "&#x25BE;"; // Triangle symbol
-
+	
 		li.appendChild(attrLabel);
 		li.appendChild(triangle);
-
+	
 		// Handle the filter box display
 		triangle.addEventListener('click', (e) => {
 			e.stopPropagation();
 			showFilterBox(attr, triangle);
 		});
-
+	
 		// Set drag data
 		li.draggable = true;
 		li.addEventListener('dragstart', (e) => {
-			e.dataTransfer.setData('text/plain', attr);
+			e.dataTransfer.setData('text/plain', attr); // Transfers attribute name
 		});
-
+	
 		target.appendChild(li);
 	}
-
+	
 	const attributes = Object.keys(input[0]);
 	attributes.forEach(attr => {
 		if (!opts.cols.includes(attr) && !opts.rows.includes(attr)) {
@@ -487,18 +458,18 @@ function pivotUI(element, input, inputOpts = {}) {
 	// Enable drop zones for rows, columns, and unused attributes
 	function enableDropZone(container, axis) {
 		let placeholder = null;
-
+	
 		container.addEventListener('dragover', (e) => {
-			e.preventDefault(); 
+			e.preventDefault();
 
 			// Creates a placeholder if it doesn't already exists
 			if (!placeholder) {
 				placeholder = document.createElement('li');
 				placeholder.className = 'pvtPlaceholder';
-				container.appendChild(placeholder); 
+				container.appendChild(placeholder);
 			}
 		});
-
+	
 		container.addEventListener('dragleave', () => {
 			// Remove the placeholder when dragging leaves the zone
 			if (placeholder && container.contains(placeholder)) {
@@ -506,48 +477,46 @@ function pivotUI(element, input, inputOpts = {}) {
 				placeholder = null;
 			}
 		});
-
+	
 		container.addEventListener('drop', (e) => {
 			e.preventDefault();
-
 			// remove placeholder once the drop occurs
 			if (placeholder && container.contains(placeholder)) {
 				container.removeChild(placeholder);
 				placeholder = null;
 			}
-
+	
 			const droppedAttr = e.dataTransfer.getData('text/plain');
-
-			// Move the attribute to the corresponding area and remove from the previous list
+			const draggedElement = document.getElementById(`attr-${droppedAttr}`);
+	
+			// If the dropped attribute is already in the target zone, do nothing
+			if ((axis === 'rows' && opts.rows.includes(droppedAttr)) ||
+				(axis === 'cols' && opts.cols.includes(droppedAttr)) ||
+				(axis === 'unused' && (!opts.rows.includes(droppedAttr) && !opts.cols.includes(droppedAttr)))) {
+				return; 
+			}
+	
+			// Remove the dragged element from its original parent if found
+			if (draggedElement && draggedElement.parentNode) {
+				draggedElement.parentNode.removeChild(draggedElement);
+			}
+	
+			// Add the attribute to the appropriate list
 			if (axis === 'rows' && !opts.rows.includes(droppedAttr)) {
-				opts.cols = opts.cols.filter(col => col !== droppedAttr); 
+				opts.cols = opts.cols.filter(col => col !== droppedAttr);
 				opts.rows.push(droppedAttr);
-				removeAttributeFromLists(droppedAttr);
 				makeDraggable(droppedAttr, rowList);
 			} else if (axis === 'cols' && !opts.cols.includes(droppedAttr)) {
 				opts.rows = opts.rows.filter(row => row !== droppedAttr);
 				opts.cols.push(droppedAttr);
-				removeAttributeFromLists(droppedAttr);
 				makeDraggable(droppedAttr, colList);
 			} else if (axis === 'unused') {
 				opts.rows = opts.rows.filter(r => r !== droppedAttr);
 				opts.cols = opts.cols.filter(c => c !== droppedAttr);
-				removeAttributeFromLists(droppedAttr);
 				makeDraggable(droppedAttr, unusedList);
 			}
-
+			
 			refresh();
-		});
-	}
-
-	// Helper function to remove the attribute from any of the lists
-	function removeAttributeFromLists(attr) {
-		[rowList, colList, unusedList].forEach(list => {
-			Array.from(list.children).forEach(child => {
-				if (child.querySelector('.pvtAttr').textContent === attr) {
-					child.remove();
-				}
-			});
 		});
 	}
 

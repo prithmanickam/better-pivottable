@@ -78,6 +78,13 @@ table.pvtTable tbody tr td {
     border-radius: 5px;
 }
 
+.pvtAttr {
+    background: #F3F3F3;
+    border: 1px solid #DEDEDE;
+    border-radius: 8px;
+    margin: 5px;
+}
+
 .pvtTriangle {
     cursor:pointer;
     color: grey;
