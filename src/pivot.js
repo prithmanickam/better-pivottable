@@ -406,6 +406,7 @@ function pivotUI(element, input, inputOpts = {}) {
 		li.id = `attr-${attr}`; // id to track the element
 	
 		const attrLabel = document.createElement('span');
+		attrLabel.classList.add('pvtAttrLabel');
 		attrLabel.textContent = attr;
 	
 		const triangle = document.createElement('span');
@@ -599,8 +600,8 @@ function pivotUI(element, input, inputOpts = {}) {
 	function refresh() {
 		const updatedOpts = {
 			...opts,
-			cols: Array.from(colList.children).map(li => li.querySelector('.pvtAttr').textContent.trim()),
-			rows: Array.from(rowList.children).map(li => li.querySelector('.pvtAttr').textContent.trim()),
+			cols: Array.from(colList.children).map(li => li.querySelector('.pvtAttrLabel').textContent.trim()),
+			rows: Array.from(rowList.children).map(li => li.querySelector('.pvtAttrLabel').textContent.trim()),
 			filters: opts.filters
 		};
 
