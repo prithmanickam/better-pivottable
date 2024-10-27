@@ -35,6 +35,12 @@ table.pvtTable tbody tr td {
     display: inline-block; }
 .pvtAggregator { margin-bottom: 5px ;}
 
+.pvtCols {
+    display: flex;
+    flex-direction: row;
+    gap: 5px; 
+}
+
 .pvtAxisContainer, .pvtVals {
     border: 1px solid gray;
     background: #EEE;

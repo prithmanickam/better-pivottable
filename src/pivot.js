@@ -469,22 +469,16 @@ function pivotUI(element, input, inputOpts = {}) {
 	// Axis containers for rows and columns
 	const rowContainer = document.createElement('td');
 	rowContainer.classList.add('pvtAxisContainer', 'pvtRows', 'pvtUiCell');
-	const rowTitle = document.createElement('div');
-	rowTitle.textContent = 'Rows';
-	rowContainer.appendChild(rowTitle);
 
-	const rowList = document.createElement('ul');
+	const rowList = document.createElement('li');
 	rowContainer.appendChild(rowList);
 
 	opts.rows.forEach(row => makeDraggable(row, rowList));
 
 	const colContainer = document.createElement('td');
 	colContainer.classList.add('pvtAxisContainer', 'pvtCols', 'pvtUiCell', 'pvtHorizList');
-	const colTitle = document.createElement('div');
-	colTitle.textContent = 'Columns';
-	colContainer.appendChild(colTitle);
 
-	const colList = document.createElement('ul');
+	const colList = document.createElement('li');
 	colList.classList.add('pvtHorizList');
 	colContainer.appendChild(colList);
 

@@ -26,16 +26,18 @@
                 const outputElement = document.getElementById("output");
                 pivotUI(outputElement, 
                     [
-                        {color: "blue", shape: "circle"},
-                        {color: "red", shape: "triangle"}
+                        {color: "blue", shape: "circle", size: "large", material: "metal"},
+                        {color: "red", shape: "triangle", size: "small", material: "plastic"},
+                        {color: "green", shape: "square", size: "medium", material: "wood"},
+                        {color: "green", shape: "circle", size: "large", material: "wood"}
                     ],
                     {
-                        rows: ["color"],
-                        cols: ["shape"]
+                        rows: ["color", "size"],
+                        cols: ["shape", "material"]
                     }
                 );
             });
-        </script>        
+        </script>
         <div id="output" style="margin: 30px;"></div>
     </body>
 </html>
