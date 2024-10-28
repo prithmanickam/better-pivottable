@@ -41,6 +41,10 @@ table.pvtTable tbody tr td {
     gap: 5px; 
 }
 
+.pvtRows {
+    vertical-align: top; 
+}
+
 .pvtAxisContainer, .pvtVals {
     border: 1px solid gray;
     background: #EEE;
