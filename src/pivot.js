@@ -12,7 +12,7 @@ class PivotData {
 		this.tree = {};
 		this.rowTotals = {};
 		this.colTotals = {};
-		this.allTotal = opts.aggregator([]);
+		this.allTotal = this.aggregator();
 		this.processData(input);
 	}
 
@@ -29,17 +29,15 @@ class PivotData {
 					this.tree[rowKeyStr] = {};
 				}
 				if (!this.tree[rowKeyStr][colKeyStr]) {
-					this.tree[rowKeyStr][colKeyStr] = this.aggregator([]);
+					this.tree[rowKeyStr][colKeyStr] = this.aggregator();
 				}
 				this.tree[rowKeyStr][colKeyStr].push(record);
-
 				if (!this.rowTotals[rowKeyStr]) {
-					this.rowTotals[rowKeyStr] = this.aggregator([]);
+					this.rowTotals[rowKeyStr] = this.aggregator();
 				}
 				this.rowTotals[rowKeyStr].push(record);
-
 				if (!this.colTotals[colKeyStr]) {
-					this.colTotals[colKeyStr] = this.aggregator([]);
+					this.colTotals[colKeyStr] = this.aggregator();
 				}
 				this.colTotals[colKeyStr].push(record);
 				this.allTotal.push(record);
@@ -77,11 +75,11 @@ class PivotData {
 
 	getAggregator(rowKeyStr, colKeyStr) {
 		if (rowKeyStr && colKeyStr) {
-			return this.tree[rowKeyStr]?.[colKeyStr] || this.aggregator([]);
+			return this.tree[rowKeyStr]?.[colKeyStr] || this.aggregator();
 		} else if (rowKeyStr) {
-			return this.rowTotals[rowKeyStr] || this.aggregator([]);
+			return this.rowTotals[rowKeyStr] || this.aggregator();
 		} else if (colKeyStr) {
-			return this.colTotals[colKeyStr] || this.aggregator([]);
+			return this.colTotals[colKeyStr] || this.aggregator();
 		} else {
 			return this.allTotal;
 		}
@@ -90,11 +88,19 @@ class PivotData {
 
 // Aggregator function to count values
 function countAggregator() {
-	let count = 0;
 	return {
-		push: () => { count += 1; },
-		value: () => count,
-		format: val => val
+		push: function() { this.count = (this.count || 0) + 1; },
+		value: function() { return this.count || 0; },
+		format: function(val) { return val; }
+    };
+}
+
+// Aggregator function to sum values based on a field
+function sumAggregator(field) {
+	return {
+		push: function(record) { this.sum = (this.sum || 0) + (record[field] || 0); },
+		value: function() { return this.sum || 0; },
+		format: function(val) { return val.toFixed(2); }
 	};
 }
 
@@ -344,6 +350,7 @@ function pivotUI(element, input, inputOpts = {}) {
 	const opts = {
 		cols: inputOpts.cols || [],
 		rows: inputOpts.rows || [],
+		vals: inputOpts.vals || [],
 		aggregator: inputOpts.aggregator || countAggregator,
 		renderer: inputOpts.renderer || pivotTableRenderer,
 		table: {
@@ -394,19 +401,32 @@ function pivotUI(element, input, inputOpts = {}) {
 	// Aggregator dropdown
 	const aggregatorSelect = document.createElement('select');
 	aggregatorSelect.classList.add('pvtAggregator');
-	const aggregatorOption = document.createElement('option');
-	aggregatorOption.value = 'Count';
-	aggregatorOption.textContent = 'Count'; 
-	aggregatorSelect.appendChild(aggregatorOption);
+
+	// Option for Count
+	const countOption = document.createElement('option');
+	countOption.value = 'Count';
+	countOption.textContent = 'Count';
+	aggregatorSelect.appendChild(countOption);
+
+	// Option for Sum
+	const sumOption = document.createElement('option');
+	sumOption.value = 'Sum';
+	sumOption.textContent = 'Sum';
+	aggregatorSelect.appendChild(sumOption);
+
 	aggregatorContainer.appendChild(aggregatorSelect);
 
-	// Values dropdown
+	// Values dropdown (for selecting the field to sum)
 	const valueSelect = document.createElement('select');
 	valueSelect.classList.add('pvtValues');
-	const valueOption = document.createElement('option');
-	valueOption.value = 'Value';
-	valueOption.textContent = 'Value'; 
-	valueSelect.appendChild(valueOption);
+
+	// Populate valueSelect
+	opts.vals.forEach(field => {
+		const option = document.createElement('option');
+		option.value = field;
+		option.textContent = field;
+		valueSelect.appendChild(option);
+	});
 	aggregatorContainer.appendChild(valueSelect);
 
 	// Unused attributes container
@@ -465,6 +485,24 @@ function pivotUI(element, input, inputOpts = {}) {
 	}
 	element.appendChild(uiTable);
 
+
+	aggregatorSelect.addEventListener('change', () => {
+		if (aggregatorSelect.value === 'Count') {
+			opts.aggregator = countAggregator();
+		} else if (aggregatorSelect.value === 'Sum') {
+			opts.aggregator = sumAggregator(valueSelect.value);
+		}
+		refresh();
+	});
+	
+	// Handle valueSelect change to update sum field
+	valueSelect.addEventListener('change', () => {
+		if (aggregatorSelect.value === 'Sum') {
+			opts.aggregator = sumAggregator(valueSelect.value);
+			refresh();
+		}
+	});
+	
 
 	// Drag-and-drop for unused attributes
 	function makeDraggable(attr, target) {
@@ -558,7 +596,7 @@ function pivotUI(element, input, inputOpts = {}) {
 				opts.cols = opts.cols.filter(c => c !== droppedAttr);
 				makeDraggable(droppedAttr, unusedList);
 			}
-			
+
 			refresh();
 		});
 	}
@@ -613,11 +651,17 @@ function pivotUI(element, input, inputOpts = {}) {
 
 	// Function to refresh the pivot table on drag-and-drop or filter application
 	function refresh() {
+		const selectedAggregator = aggregatorSelect.value;
+		const selectedField = valueSelect.value;
+	
+		opts.aggregator = selectedAggregator === 'Count' ? countAggregator : () => sumAggregator(selectedField);
+	
+		// Capture the updated row and column attributes from the UI
 		const updatedOpts = {
 			...opts,
 			cols: Array.from(colList.children).map(li => li.querySelector('.pvtAttrLabel').textContent.trim()),
 			rows: Array.from(rowList.children).map(li => li.querySelector('.pvtAttrLabel').textContent.trim()),
-			filters: opts.filters
+			filters: opts.filters,
 		};
 
 		updatedOpts.rows = updatedOpts.rows.filter(row => row !== '');

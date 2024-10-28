@@ -26,14 +26,18 @@
                 const outputElement = document.getElementById("output");
                 pivotUI(outputElement, 
                     [
-                        {color: "blue", shape: "circle", size: "large", material: "metal"},
-                        {color: "red", shape: "triangle", size: "small", material: "plastic"},
-                        {color: "green", shape: "square", size: "medium", material: "wood"},
-                        {color: "green", shape: "circle", size: "large", material: "wood"}
+                        {region: "North", category: "Electronics", product: "TV", quantity: 5, sales: 1500},
+                        {region: "South", category: "Furniture", product: "Chair", quantity: 2, sales: 200},
+                        {region: "East", category: "Electronics", product: "Laptop", quantity: 3, sales: 2100},
+                        {region: "West", category: "Furniture", product: "Table", quantity: 1, sales: 350},
+                        {region: "North", category: "Electronics", product: "Phone", quantity: 10, sales: 700},
+                        {region: "East", category: "Appliances", product: "Microwave", quantity: 4, sales: 400}
                     ],
                     {
-                        rows: ["color", "size"],
-                        cols: ["shape", "material"]
+                        rows: ["region", "category"],
+                        cols: ["product"],
+                        aggregator: countAggregator, 
+                        vals: ["quantity", "sales"] 
                     }
                 );
             });
